@@ -1,15 +1,14 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
-public class PlayerInput : MonoBehaviour
+[CreateAssetMenu(fileName = "InputContainer", menuName = "CoreGame/InputContainer")]
+public class InputContainer : ScriptableObject
 {
-    private void OnEnable() => mInputContainer.inputActionAsset.Enable();
-    private void OnDisable() => mInputContainer.inputActionAsset.Disable();
+    public InputActionAsset inputActionAsset;
 
-    [SerializeField] private InputContainer mInputContainer;
+    public InputActionReference lookAction;
+    public InputActionReference moveAction;
 
-    public Vector2 GetMoveInput() => mInputContainer.moveAction.action.ReadValue<Vector2>();
-    public Vector2 GetLookInput() => mInputContainer.lookAction.action.ReadValue<Vector2>();
-
-    public bool GetSprintInput() => mInputContainer.sprintAction.action.IsPressed();
-    public bool GetJumpThisFrame() => mInputContainer.jumpAction.action.WasPressedThisFrame();
+    public InputActionReference jumpAction;
+    public InputActionReference sprintAction;
 }
