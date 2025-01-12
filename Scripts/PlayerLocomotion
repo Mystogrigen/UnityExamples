@@ -1,0 +1,154 @@
+using System;
+using UnityEngine;
+
+public class PlayerLocomotion : MonoBehaviour
+{
+    [Header("Inputs")]
+    [SerializeField] private Vector3 mMoveInput;
+    [SerializeField] private Vector2 mLookInput;
+    [SerializeField] private bool mSprintInput;
+    [SerializeField] private bool mJumpInput;
+    
+    [Header("State")]
+    [SerializeField] private Vector3 mMovementVelocity;
+    [SerializeField] private bool mGrounded;
+    [SerializeField] private bool mJump;
+    
+    [Header("Settings")]
+    [SerializeField] private float mWalkSpeed = 4;
+    [SerializeField] private float mRunSpeed = 8;
+    [SerializeField] private float mLookSensitivity = 15;
+    [SerializeField] private float mJumpHeight = 1.5f;
+    [SerializeField] private LayerMask mGroundLayer;
+    
+    /// <summary>
+    /// Make sure to not have the PlayerBody interfere with the GroundLayer.
+    /// </summary>
+    
+    private PlayerInput _input;
+    private Camera _cam;
+    private CharacterController _cc; 
+    
+    private float _horizontalLook;
+    private float _verticalLook;
+    private Vector3 _groundNormal;
+    private float _timeSinceLastJump;
+    private float _timeSinceLeftGround;
+    private bool _wasGrounded;
+
+    private const float VERT_CLAMP = 89;
+    private const float GROUND_CHECK_DISTANCE_IN_AIR = 0.07f;
+    private const float GROUND_CHECK_DISTANCE = 0.05f;
+    private const float JUMP_GROUNDING_PREVENTION_TIME = 0.2f;
+    private const float GRAVITY = -9.81f;
+    
+    private void Start()
+    {
+        _input = GetComponent<PlayerInput>();
+        _cam = Camera.main;
+        _cc = GetComponent<CharacterController>();
+        
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+    private float GetSpeed()=> mSprintInput ? mRunSpeed : mWalkSpeed;
+
+    private void Update()
+    {
+        ProcessInput();
+        
+        _wasGrounded = mGrounded;
+
+        if (!_wasGrounded)
+            _timeSinceLeftGround += Time.deltaTime;
+        else
+            _timeSinceLeftGround = 0;
+        
+        GroundCheck();
+        ProcessLook();
+        ProcessMovement();
+        ProcessJump();
+    }
+
+    private void ProcessInput()
+    {
+        Vector2 rawMove = _input.GetMoveInput();
+
+        mMoveInput = new(rawMove.x, 0, rawMove.y);
+        mLookInput = _input.GetLookInput();
+        mSprintInput = _input.GetSprintInput();
+        mJumpInput = _input.GetJumpThisFrame();
+    }
+
+    private void ProcessJump()
+    {
+        if (!mGrounded) return;
+
+        if (mJumpInput)
+        {
+            mMovementVelocity.y = Mathf.Sqrt(mJumpHeight * -3f * GRAVITY);
+            mGrounded = false;
+            _groundNormal = Vector3.up;
+            _timeSinceLastJump = Time.time;
+        }
+    }
+
+    private void ProcessMovement()
+    {
+        Vector3 direction = transform.TransformDirection(mMoveInput) * GetSpeed();
+        Vector3 rawMoveVelocity = Vector3.ProjectOnPlane(direction, _groundNormal);
+        
+        mMovementVelocity.x = rawMoveVelocity.x;
+        mMovementVelocity.y += GRAVITY * Time.deltaTime;
+        mMovementVelocity.z = rawMoveVelocity.z;
+        
+        if (mGrounded && mMovementVelocity.y < 0)
+            mMovementVelocity.y = -2f;
+        
+        _cc.Move(mMovementVelocity * Time.deltaTime);
+    }
+
+    private void ProcessLook()
+    {
+        _horizontalLook = (mLookInput.x * Time.deltaTime) * mLookSensitivity;
+        transform.Rotate(new(transform.eulerAngles.x, _horizontalLook, transform.eulerAngles.z), Space.Self);
+
+        _verticalLook -= (mLookInput.y * Time.deltaTime) * mLookSensitivity;
+        _verticalLook = Mathf.Clamp(_verticalLook, -VERT_CLAMP, VERT_CLAMP);
+
+        _cam.transform.localRotation = Quaternion.Euler(_verticalLook, 0, 0);
+    }
+
+    private void GroundCheck()
+    {
+        //To prevent snapping to ground in the air
+        float chosenGroundCheckDistance =
+            mGrounded ? (_cc.skinWidth + GROUND_CHECK_DISTANCE) : GROUND_CHECK_DISTANCE_IN_AIR;
+
+        //reset values
+        mGrounded = false;
+        _groundNormal = Vector3.up;
+
+        //only try unless it's after the jump prevention time
+        if (Time.time >= _timeSinceLastJump + JUMP_GROUNDING_PREVENTION_TIME)
+        {
+            if (Physics.Raycast(transform.position, Vector3.down, out var hitInfo, chosenGroundCheckDistance,
+                    mGroundLayer, QueryTriggerInteraction.Ignore))
+            {
+                _groundNormal = hitInfo.normal;
+
+                
+                //only valid ground if it is in the same directon of the Player's up, and if it is lower than the slop limit
+                if (Vector3.Dot(hitInfo.normal, transform.up) > 0f && IsNormalUnderSlopeLimit(_groundNormal))
+                {
+                    mGrounded = true;
+                    
+                    //snap to the ground
+                    if (hitInfo.distance > _cc.skinWidth)
+                        _cc.Move(Vector3.down * hitInfo.distance);
+                }
+            }
+        }
+    }
+    private bool IsNormalUnderSlopeLimit(Vector3 normal) =>
+        Vector3.Angle(transform.up, normal) <= _cc.slopeLimit;
+}
