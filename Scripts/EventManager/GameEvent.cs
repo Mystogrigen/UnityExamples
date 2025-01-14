@@ -1,2 +1,5 @@
 using UnityEngine;
-public class GameEvent { }
+namespace UnityExpamples
+{
+  public class GameEvent { }
+}
