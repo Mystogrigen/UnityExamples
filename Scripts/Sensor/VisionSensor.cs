@@ -1,4 +1,4 @@
-using System;
+rusing System;
 using System.Collections;
 using UnityEngine;
 
@@ -23,8 +23,8 @@ namespace UnityExamples
         
         private void Start()
         {
-            _targetMask = _core.GetVisionTargetMask();
-            _obstructionMask = _core.GetVisionObstructionMask();
+            _targetMask = SensorManager.TargetMask;
+            _obstructionMask = SensorManager.ObstructionMask;
 
             StartCoroutine(VisionRoutine());
         }
