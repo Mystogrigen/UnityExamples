@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace UnityExample
+namespace UnityExamples
 {
     public class ExamplePoolable : MonoBehaviour, IPoolable<ExamplePoolable>
     {
