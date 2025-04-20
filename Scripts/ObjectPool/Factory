@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-namespace Mysto
+namespace UnityExamples
 {
     public class Factory : MonoBehaviour
     {
