@@ -1,0 +1,32 @@
+using System.Runtime.InteropServices;
+using UnityEngine;
+
+namespace Mysto
+{
+    public class Factory : MonoBehaviour
+    {
+        private void Start()
+        {
+            SetupPools();
+        }
+
+        [Header("Pools")]
+        [field: SerializeField] public Pool<ExamplePoolable> ExamplePool { get; private set; }
+        
+        [Header("Prefabs")]
+        [SerializeField] private ExamplePoolable mExamplePoolablePrefab;
+        
+        private Pool<T> CreatePool<T>(T prefab) where T : MonoBehaviour, IPoolable<T> => new(prefab, CreateParent(typeof(T).Name));
+        private Transform CreateParent(string objName)
+        {
+            Transform returnObj = new GameObject(objName).transform;
+            returnObj.parent = transform;
+            
+            return returnObj;
+        }
+        private void SetupPools()
+        {
+            ExamplePool = CreatePool(mExamplePoolablePrefab);
+        }
+    }
+}
